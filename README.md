@@ -1,3 +1,5 @@
+# Bitcoin Lightning Improvement Proposal
+
 bLIP stands for Bitcoin Lightning Improvement Proposal. A bLIP is a design document 
 providing information to the Lightning community, or describing a new feature for 
 the Lightning Network. The bLIP should provide a concise technical specification of 
@@ -12,8 +14,10 @@ list](https://lists.linuxfoundation.org/mailman/listinfo/lightning-dev). After
 discussion, please open a PR. After copy-editing and acceptance, it will be 
 published here.
 
-For more detail on the process, please read <a href="blip-0001.md">bLIP-0001</a>.
+For more detail on the process, please read [bLIP-0001](./blip-0001.md) and
+[bLIP-0002](./blip-0002.md).
 
-| Number | Title | Author | Status |
-|--------|-------|--------|--------|
-|1|bLIP Process|Ryan Gentry|Active|
+| Number | Title                     | Author                      | Status |
+|--------|---------------------------|-----------------------------|--------|
+| 1      | bLIP Process              | Ryan Gentry                 | Active |
+| 2      | reserved values           | Bastien Teinturier          | Active |
