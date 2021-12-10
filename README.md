@@ -19,5 +19,5 @@ For more detail on the process, please read [bLIP-0001](./blip-0001.md) and
 
 | Number | Title                     | Author                      | Status |
 |--------|---------------------------|-----------------------------|--------|
-| 1      | bLIP Process              | Ryan Gentry                 | Active |
-| 2      | reserved values           | Bastien Teinturier          | Active |
+| [1](./blip-0001.md)      | bLIP Process              | Ryan Gentry                 | Active |
+| [2](./blip-0002.md)      | reserved values           | Bastien Teinturier          | Active |
