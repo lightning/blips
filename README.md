@@ -23,3 +23,4 @@ For more detail on the process, please read [bLIP-0001](./blip-0001.md) and
 | [2](./blip-0002.md)      | Reserved Values           | Bastien Teinturier          | Active |
 | [3](./blip-0003.md)      | Keysend                   | Valentine Wallace           | Active |
 | [10](./blip-0010.md)     | Podcasting 2.0            | Satoshis Stream             | Active |
+| [11](./blip-0011.md)     | NameDesc                  | Hampus Sjöberg              | Active |
