@@ -24,4 +24,4 @@ For more detail on the process, please read [bLIP-0001](./blip-0001.md) and
 | [3](./blip-0003.md)      | Keysend                   | Valentine Wallace           | Active |
 | [10](./blip-0010.md)     | Podcasting 2.0            | Satoshis Stream             | Active |
 | [11](./blip-0011.md)     | NameDesc                  | Hampus Sjöberg              | Active |
-| [12](./blip-0012.md)     | Hosted Channels           | Anton Kumaigorodskiy        | Active |
+| [17](./blip-0017.md)     | Hosted Channels           | Anton Kumaigorodskiy        | Active |
