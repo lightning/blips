@@ -25,3 +25,4 @@ For more detail on the process, please read [bLIP-0001](./blip-0001.md) and
 | [10](./blip-0010.md)     | Podcasting 2.0            | Satoshis Stream             | Active |
 | [11](./blip-0011.md)     | NameDesc                  | Hampus Sjöberg              | Active |
 | [17](./blip-0017.md)     | Hosted Channels           | Anton Kumaigorodskiy        | Active |
+| [xx](./blip-0030.md)     | Zero-reserve channels     | Bastien Teinturier          | Active |
