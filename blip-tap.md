@@ -1,5 +1,5 @@
 ```
-bLIP: ????
+bLIP: 29
 Title: Taproot Asset Channels
 Status: Active
 Author: Olaoluwa Osuntokun <laolu32@gmail.com>
@@ -212,7 +212,8 @@ merged. When splitting an asset, in order to ensure that the supply of an asset
 is conserved (no inflation occurred) any resulting UTXOs created from the
 source UTXO are inserted into a special MS-SMT tree dubbed a
 `split_commitment`. A "root" asset is designated which holds the root hash of
-the `split_commitment`. Any splits that were created from the root asset 
+the `split_commitment`. Any splits that were created from the root asset carry
+a special merkle proof that proves that no assets were inflated.
 
 This design enables a verifier to easily verify that an asset's supply wasn't
 inflated by verifying that the `(asset_id, amt)` of the input asset is exactly
@@ -538,8 +539,10 @@ The funding output for the TAP layer is effectively a direct mirror of the
 funding output on the Bitcoin layer, with a normal tapscript tweak used rather
 than a BIP 86 tweak.
 
-The `tap_asset_proof` message sends all the fully singed asset TLV leafs ahead
-of time, as 
+The `tap_asset_proof` message can omit the normal witness field for the TLVs.
+Instead, only a challenge TLV needs to be sent to prove that the initiator can
+actually move those assets. Unless otherwise specified, all asset TLVs as part
+of this protocol will use encoding `v1`, also known as the segwit encoding.
 
 // TODO(roasbeef): partial reveal here? needed in any case to accept funding,
 but has similar issues to dual funding reveal, but constrained
@@ -680,8 +683,8 @@ The `tap_to_local_script_root` is itself, a nested instance of the _existing_
 The important derivation is the `script_key` of the TLV leaf in the asset tree,
 which is derived as:
 ```
-to_delay_script_root = tapscript_root([to_delay_script, revoke_script])
-tap_to_local_output_key = taproot_nums_point + tagged_hash("TapTweak", taproot_nums_point || to_delay_script_root)
+tap_to_delay_script_root = tapscript_root([to_delay_script, revoke_script])
+tap_to_local_output_key = taproot_nums_point + tagged_hash("TapTweak", taproot_nums_point || tap_to_delay_script_root)
 ```
 
 To derive the `tap_to_local_script_root`:
@@ -901,10 +904,10 @@ mechanism to complete the route by bridging the TAP edge liquidity with the
 Bitcoin Backbone portion of the Lightning Network.
 
 For each logical payment to be accepted, the Edge Node and the Liquidity
-Provider engage in Request-For-Quote (RFC) swap negotiation. Once a price has
+Provider engage in Request-For-Quote (RFQ) swap negotiation. Once a price has
 been accepted, a final response is returned that uniquely identifies that
 specified price. The final quote is then identified by either a `tap_rfq_scid`
-or a `tap_rfc_hash`. The former is laced in the first hop for an outgoing
+or a `tap_rfq_hash`. The former is laced in the first hop for an outgoing
 payment with a TAP origin, and the latter placed within the normal onion
 payload for a last-mile hop into a TAP asset.
 
@@ -950,6 +953,9 @@ bytes of the `rfq_id` and interpreting them as a 64-bit integer.
 ###### Requirements
 
 The sender:
+
+  - MUST ensure that the `tap_rfq_scid` mapping of an `rfq_id` doesn't collide
+    with the `scid` of any active channels.
 
   - MUST ensure that an `rfq_id` is never repeated for the lifetime of a
     connection
@@ -1017,7 +1023,7 @@ The sender:
   - MUST set `expiry_seconds` to the relative expiry time in the future that
     the quote will expire after which
 
-  - MUST set `rfg_sig` to be a BIP-340 schnorr signature over the serialized
+  - MUST set `rfq_sig` to be a BIP-340 schnorr signature over the serialized
     contents of the message without the `rfq_sig` serialized, using their node
     public key
 
@@ -1060,7 +1066,7 @@ The recipient:
 #### First Hop TAP HTLC Onion Processing
 
 When sending a payment that uses an outbound TAP asset HTLC as it's origin, in
-order for the payment succeed, the sender must place the negotiated `rfc_id` in
+order for the payment succeed, the sender must place the negotiated `rfq_id` in
 the payload for the first hop (the liquidity provider):
 
 - type: 75253
@@ -1072,7 +1078,7 @@ HTLC has a TAP asset origin.
 
 In addition to the normal hop payload checks, the forwarding node MUST also
 verify that the conversion rate of the outgoing HTLC as specified in the onion
-matches the `accepted_rate_tick` of the corresponding `tap_rfc_id`.
+matches the `accepted_rate_tick` of the corresponding `tap_rfq_id`.
 
 When receiving an incoming onion TLV payload sourced from a TAP channel, the
 receiving node:
@@ -1128,11 +1134,11 @@ receiver:
   `expiry_seconds` value
 
 - MUST reject the entire HTLC set if at anytime, the sum of HTLCs (the
-  `amt_to_forward` field) targetting `tap_rfc_scid` eceeds the negotiated
+  `amt_to_forward` field) targetting `tap_rfq_scid` eceeds the negotiated
   `asset_amt` field (volume for quote exhausted)
 
 - MUST extend a TAP HTLC with an `asset_id` corresponding to the accepted
-  `tap_rfc_scid` with an asset value of: `((amt_asset_incoming *
+  `tap_rfq_scid` with an asset value of: `((amt_asset_incoming *
   accepted_rate_tick) // msat_multiplier) / tick`
 
   * As an example:
