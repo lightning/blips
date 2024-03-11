@@ -22,6 +22,7 @@ For more detail on the process, please read [bLIP-0001](./blip-0001.md) and
 | [1](./blip-0001.md)      | bLIP Process              | Ryan Gentry                 | Active |
 | [2](./blip-0002.md)      | Reserved Values           | Bastien Teinturier          | Active |
 | [3](./blip-0003.md)      | Keysend                   | Valentine Wallace           | Active |
+| [4](./blip-0004.md)      | Experimental Endorsement  | Carla Kirk-Cohen            | Active |
 | [10](./blip-0010.md)     | Podcasting 2.0            | Satoshis Stream             | Active |
 | [11](./blip-0011.md)     | NameDesc                  | Hampus Sjöberg              | Active |
 | [17](./blip-0017.md)     | Hosted Channels           | Anton Kumaigorodskiy        | Active |
