@@ -994,7 +994,7 @@ the edge node is willing to observe to move `N` units of asset `asset_id`:
 2. data:
      * [`32*byte`:`rfq_id`]
      * [`BigSize`:`accepted_rate_tick]
-     * [`BigSize`:`expiry_seconds`]
+     * [`BigSize`:`expiry`]
      * [`64*byte`:`rfq_sig`]
 
 TODO(roasbeef): tlv err where?
@@ -1006,8 +1006,8 @@ where:
 * `accepted_rate_tick` is the proposed rate for the volume unit expressed in
   the internal unit of a `tick`.
 
-* `expiry_seconds` is the amount of seconds to use for the expiry of both the
-  quote and the invoice
+* `expiry` is the quote expiry lifetime unix timestamp. The quote is only valid
+  until this time.
 
 * `rfq_sig` is a signature over the serialized contents of the message 
 
@@ -1020,8 +1020,8 @@ The sender:
   - MUST set `accepted_rate_tick` to a value they deem to be an acceptable
     exchange rate
 
-  - MUST set `expiry_seconds` to the relative expiry time in the future that
-    the quote will expire after which
+  - MUST set `expiry` to a future unix timestamp after which the quote is no
+    longer valid
 
   - MUST set `rfq_sig` to be a BIP-340 schnorr signature over the serialized
     contents of the message without the `rfq_sig` serialized, using their node
@@ -1034,8 +1034,8 @@ The recipient:
   - MUST abandon the attempt if they deem that `accepted_rate_tick` is
     unreasonable
 
-  - SHOULD no longer attempt to utilize the cleared quote after
-    `expiry_seconds` has elapsed
+  - SHOULD no longer attempt to utilize the cleared quote after unix timestamp
+    `expiry`
 
 #### Rejecting Quotes  (`tap_rfq_reject`) 
 
@@ -1088,8 +1088,8 @@ receiving node:
 
 - MUST reject the payment if `tap_rfq_id` is unknown.
 
-- MUST reject the payment if the `tap_rfq_id` has expired based on the
-  posted `expiry_seconds` value.
+- MUST reject the payment if the `tap_rfq_id` has expired based on the posted
+  `expiry` value.
 
 - MUST reject the payment the `amt_to_forward != (amt_asset_incoming * tick *
   msat_multiplier) / accepted_rate_tick
@@ -1130,8 +1130,8 @@ the sender needing to worry about exchange rates at all.
 When receieving an incoming onion payload with a known `rfq_scid` value, the
 receiver:
 
-- MUST reject the HTLC is `tap_scid` is expired based on the posted
-  `expiry_seconds` value
+- MUST reject the HTLC is `tap_scid` is expired based on the posted `expiry`
+  value
 
 - MUST reject the entire HTLC set if at anytime, the sum of HTLCs (the
   `amt_to_forward` field) targetting `tap_rfq_scid` eceeds the negotiated
@@ -1172,7 +1172,8 @@ BTC-only link is no different. The final rate negotiated is then transparently
 passed on as an additional last-hop fee.
 
 When creating an invoice, the creator MUST ensure that the invoice expiry value
-is set exactly to the `expiry_seconds` value of the accepted RFQ.
+is set exactly to the lifetime of the accepted RFQ based on the RFQ `expiry`
+unix timestamp.
 
 When creating an invoice from an `accepted_rate_tick`, with a base currency of
 `asset_id`, a conversion MUST be carried out to express the desired amount in
