@@ -17,11 +17,12 @@ published here.
 For more detail on the process, please read [bLIP-0001](./blip-0001.md) and
 [bLIP-0002](./blip-0002.md).
 
-| Number                   | Title                     | Author                      | Status |
-|--------------------------|---------------------------|-----------------------------|--------|
-| [1](./blip-0001.md)      | bLIP Process              | Ryan Gentry                 | Active |
-| [2](./blip-0002.md)      | Reserved Values           | Bastien Teinturier          | Active |
-| [3](./blip-0003.md)      | Keysend                   | Valentine Wallace           | Active |
-| [10](./blip-0010.md)     | Podcasting 2.0            | Satoshis Stream             | Active |
-| [11](./blip-0011.md)     | NameDesc                  | Hampus Sjöberg              | Active |
-| [17](./blip-0017.md)     | Hosted Channels           | Anton Kumaigorodskiy        | Active |
+| Number                   | Title                          | Author                      | Status |
+|--------------------------|--------------------------------|-----------------------------|--------|
+| [1](./blip-0001.md)      | bLIP Process                   | Ryan Gentry                 | Active |
+| [2](./blip-0002.md)      | Reserved Values                | Bastien Teinturier          | Active |
+| [3](./blip-0003.md)      | Keysend                        | Valentine Wallace           | Active |
+| [10](./blip-0010.md)     | Podcasting 2.0                 | Satoshis Stream             | Active |
+| [11](./blip-0011.md)     | NameDesc                       | Hampus Sjöberg              | Active |
+| [17](./blip-0017.md)     | Hosted Channels                | Anton Kumaigorodskiy        | Active |
+| [36](./blip-0036.md)     | On-the-fly channel funding     | Bastien Teinturier          | Active |
