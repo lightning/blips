@@ -17,13 +17,14 @@ published here.
 For more detail on the process, please read [bLIP-0001](./blip-0001.md) and
 [bLIP-0002](./blip-0002.md).
 
-| Number                   | Title                          | Author                      | Status |
-|--------------------------|--------------------------------|-----------------------------|--------|
-| [1](./blip-0001.md)      | bLIP Process                   | Ryan Gentry                 | Active |
-| [2](./blip-0002.md)      | Reserved Values                | Bastien Teinturier          | Active |
-| [3](./blip-0003.md)      | Keysend                        | Valentine Wallace           | Active |
-| [10](./blip-0010.md)     | Podcasting 2.0                 | Satoshis Stream             | Active |
-| [11](./blip-0011.md)     | NameDesc                       | Hampus Sjöberg              | Active |
-| [17](./blip-0017.md)     | Hosted Channels                | Anton Kumaigorodskiy        | Active |
-| [25](./blip-0025.md)     | Forward less than onion value  | Valentine Wallace           | Active |
-| [32](./blip-0032.md)     | Onion Message DNS Resolution   | Matt Corallo                | Active |
+| Number                   | Title                              | Author                      | Status |
+|--------------------------|------------------------------------|-----------------------------|--------|
+| [1](./blip-0001.md)      | bLIP Process                       | Ryan Gentry                 | Active |
+| [2](./blip-0002.md)      | Reserved Values                    | Bastien Teinturier          | Active |
+| [3](./blip-0003.md)      | Keysend                            | Valentine Wallace           | Active |
+| [10](./blip-0010.md)     | Podcasting 2.0                     | Satoshis Stream             | Active |
+| [11](./blip-0011.md)     | NameDesc                           | Hampus Sjöberg              | Active |
+| [17](./blip-0017.md)     | Hosted Channels                    | Anton Kumaigorodskiy        | Active |
+| [25](./blip-0025.md)     | Forward less than onion value      | Valentine Wallace           | Active |
+| [32](./blip-0032.md)     | Onion Message DNS Resolution       | Matt Corallo                | Active |
+| [34](./blip-0034.md)     | The `recommended_feerates` message | Bastien Teinturier          | Active |
