@@ -919,149 +919,380 @@ order to clamp down on price volatility exposure.
 TODO(roasbeef): explain AMP/keyspend, basically unsolicited quote req, can
 accept if favorable
 
-
 #### RFQ Negotiation
+
+This section describes the Request-For-Quote (RFQ) negotiation process. A
+successful outcome of the RFQ process between two peers is an agreed currency
+exchange rate. This rate can be used to convert a TAP asset amount into BTC, or
+vice versa.
 
 ##### Request For Quote (`tap_rfq`)
 
-When a receiver wishes to receive `N` units of TAP asset ID `asset_id`, a new
-p2p message `tap_rfq` is sent with the following structure:
+An RFQ negotiation is initiated when a requesting peer sends a new quote request
+p2p message called `tap_rfq` to their channel counterparty.
 
-1. type: ?? (`tap_rfq`)
-2. data:
-     * [`32*byte`:`rfq_id`]
-     * [`32*byte`:`asset_id`]
-     * [`BigSize`:`asset_amt`]
-     * [`BigSize`:`suggested_rate_tick`]
+In this message, the peer includes the asset they wish to obtain (identified by
+`in_asset_id`/`in_asset_group_key`) and the asset they wish to divest
+(identified by `out_asset_id`/`out_asset_group_key`).
+
+The `tap_rfq` message has a BOLT 01 wire message type integer of 52884, falling
+within the custom message range. Its TLV stream consists of the following TLV
+fields:
+
+| TLV Type | Field Name          | Field Type |
+|----------|---------------------|------------|
+| 0        | version             | 1*byte     |
+| 2        | rfq_id              | 32*byte    |
+| 4        | transfer_type       | 1*byte     |
+| 6        | expiry              | 8*byte     |
+| 9        | in_asset_id         | 32*byte    |
+| 11       | in_asset_group_key  | 33*byte    |
+| 13       | out_asset_id        | 32*byte    |
+| 15       | out_asset_group_key | 33*byte    |
+| 16       | max_in_asset        | BigSize    |
+| 19       | in_asset_to_btc     | FixedPoint |
+| 21       | out_asset_to_btc    | FixedPoint |
+| 23       | min_in_asset        | BigSize    |
+| 25       | min_out_asset       | BigSize    |
 
 where:
 
-* `rfq_id` is a randomly generate 32-byte value to uniquely identify this RFQ
-  request
-* `asset_id` is the asset ID of the asset the receiver intends to receive
-* `asset_amt` is the amount of units of said asset
-* `suggested_rate_tick` is the internal unit used for asset conversions. A tick
-  is 1/10000th of a currency unit. It gives us up to 4 decimal places of
-  precision (0.0001 or 0.01% or 1 bps). As an example, if the BTC/USD rate was
-  $61,234.95, then we multiply that by 10,000 to arrive at the `usd_rate_tick`:
-  `$61,234.95 * 10000 = 612,349,500`.  To convert back to our normal rate, we
-  decide by `10,000` to arrive back at `$61,234.95`.
+* `version` is the version of the quote request message; the current version
+  is `1`.
 
-Given valid `rfq_id`, we then define an `tap_rfq_scid` by taking the last `8`
-bytes of the `rfq_id` and interpreting them as a 64-bit integer. 
+* `rfq_id` is a randomly generated 32-byte value to uniquely identify this RFQ
+  request.
+
+* `transfer_type` (`uint8`): Specifies the type of transaction that will take
+  place if the quote request results in an accepted agreement. It is set to:
+    * `0` when the transfer type is unspecified.
+    * `1` when the requesting peer is attempting to pay a lightning invoice.
+    * `2` when the requesting peer is seeking to receive funds corresponding to
+      a lightning invoice.
+
+* `expiry` is the Unix timestamp in seconds representing the exact time after
+  which the quote request and rate information are no longer valid.
+
+* `in_asset_id` represents the identifier of the asset which will be inbound
+  to the requesting peer (therefore outbound to the counterparty peer). The
+  values of `in_asset_id` and `in_asset_group_key` must both be set to all
+  zeros to indicate that the in-asset is BTC milli-satoshis. This field is
+  optional; however, either `in_asset_id` or `in_asset_group_key` must be set.
+
+* `in_asset_group_key` is the serialized compressed public group key of the
+  asset which will be inbound to the requesting peer (therefore outbound to
+  the counterparty). The values of `in_asset_id` and `in_asset_group_key` must
+  both be set to all zeros to indicate that the in-asset is BTC milli-satoshis.
+  This field is optional; however, either `in_asset_id` or `in_asset_group_key`
+  must be set.
+
+* `out_asset_id` represents the identifier of the asset which will be outbound
+  to the requesting peer (and therefore inbound to the counterparty). The values
+  of `out_asset_id` and `out_asset_group_key` must both be set to all zeros to
+  indicate that the out-asset is BTC milli-satoshis. This field is optional;
+  however, either `out_asset_id` or `out_asset_group_key` must be set.
+
+* `out_asset_group_key` is the serialized compressed public group key of the
+  asset which will be outbound to the requesting peer (and therefore inbound to
+  the counterparty). The values of `out_asset_id` and `out_asset_group_key` must
+  both be set to all zeros to indicate that the out-asset is BTC milli-satoshis.
+  This field is optional; however, either `out_asset_id` or
+  `out_asset_group_key` must be set.
+
+* `max_in_asset` represents the maximum quantity of in-asset that the
+  counterparty is expected to divest, whether the asset involved is BTC or
+  otherwise.
+
+* `in_asset_to_btc` is an optional proposed in-asset to BTC conversion rate
+  represented as a [fixed-point number](#fixed-point-number-type). When the
+  in-asset is BTC milli-satoshis (msats), this field should be set to 100
+  billion since there are 100 billion msats in a BTC.
+
+* `out_asset_to_btc` is an optional proposed out-asset to BTC conversion rate
+  represented as a [fixed-point number](#fixed-point-number-type). When the
+  out-asset is BTC milli-satoshis (msats), this field should be set to 100
+  billion since there are 100 billion msats in a BTC.
+
+* `min_in_asset` is an optional minimum quantity of in-asset that may be
+  transferred under the terms of the quote, applicable whether the asset is BTC
+  or any other.
+
+* `min_out_asset` is an optional minimum quantity of out-asset that may be
+  transferred under the terms of the quote, applicable whether the asset is BTC
+  or any other.
+
+Note that all numeric types, except for `BigSize` types, are encoded in
+big-endian byte order.
+
+Given a valid `rfq_id`, the RFQ specific SCID `tap_rfq_scid` is defined by
+taking the last `8` bytes of the `rfq_id` and interpreting them as a 64-bit
+integer.
 
 ###### Requirements
 
 The sender:
 
-  - MUST ensure that the `tap_rfq_scid` mapping of an `rfq_id` doesn't collide
-    with the `scid` of any active channels.
+- MUST ensure that the `tap_rfq_scid` mapping of an `rfq_id` doesn't collide
+  with the `scid` of any active channels.
 
-  - MUST ensure that an `rfq_id` is never repeated for the lifetime of a
-    connection
+- MUST ensure that an `rfq_id` is never repeated for the lifetime of a
+  connection.
     - It is recommended that the value be generated using a CSPRNG. Otherwise,
       a simple counter system from a starting value can be used, with the nonce
       offer incrementing by one each time.
 
-  - MUST set `asset_id` to the ID of an asset contained in the backing channel.
+- MUST set either `in_asset_id` or `in_asset_group_key`, but not both. If set
+  to all zeros, `in_asset_id` represents BTC.
 
-  - SHOULD specify reasonable values for `suggested_rate_tick` 
+- MUST set either `out_asset_id` or `out_asset_group_key`, but not both. If
+  set to all zeros, `out_asset_id` represents BTC.
+
+- MUST ensure that the specified TAP assets are present in the backing
+  channel.
+
+- SHOULD specify reasonable values for `expiry`, `in_asset_to_btc`,
+  `out_asset_to_btc`, and `max_in_asset`.
 
 The recipient:
 
-  - SHOULD send a `tap_rfq_reject` message if `rfq_id` has been used before
+- SHOULD send a `tap_rfq_reject` message if `rfq_id` has been used before.
 
-  - MUST send an `tap_rfq_reject` message if `asset_id` is not committed to in
-    the open channel
+- MUST send a `tap_rfq_reject` message if `in_asset_id` is not committed to
+  in the open channel, unless `in_asset_id` is all zeros, representing BTC.
 
-  - MUST send an `tap_rfq_reject` message if the requested `asset_amt` is
-    greater than the settled remote balance of that asset
+- MUST send a `tap_rfq_reject` message if `out_asset_id` is not committed to
+  in the open channel, unless `out_asset_id` is all zeros, representing BTC.
 
-  - SHOULD take the `suggested_rate_tick` values into account when deciding
-    whether to accept or reject the quote
+- MUST send a `tap_rfq_reject` message if both `in_asset_id` and
+  `out_asset_id` are all zeros, representing BTC, unless either
+  `in_asset_group_key` or `out_asset_group_key` is set.
+
+- MUST send a `tap_rfq_reject` message if the requested `max_in_asset` is
+  greater than the settled remote balance of that asset.
+
+- SHOULD take the values of `expiry`, `in_asset_to_btc`, `out_asset_to_btc`, and
+  `max_in_asset` into account when deciding whether to accept or reject the
+  quote request.
 
 #### Request For Quote Response (`tap_rfq_accept`) + (`tap_rfq_reject`)
 
 Once the edge node has received, the `tap_rfq` message, then it should decide
 if it's able to accommodate the quote or not. 
 
-#### Accepting Quotes  (`tap_rfq_accept`) 
+#### Accepting Quotes  (`tap_rfq_accept`)
 
-If it can, then it should send `tap_rfq_accept` that returns the quote amount
-the edge node is willing to observe to move `N` units of asset `asset_id`:
+The edge node may optionally respond to the quote request with a
+`tap_rfq_accept` message, indicating the acceptance of the quote request. This
+message has a BOLT 01 wire message type integer of 52885, which falls within the
+custom message range. The associated TLV stream includes the following TLV
+fields:
 
-1. type: ?? (`tap_req_accept`)
-2. data:
-     * [`32*byte`:`rfq_id`]
-     * [`BigSize`:`accepted_rate_tick]
-     * [`BigSize`:`expiry`]
-     * [`64*byte`:`rfq_sig`]
-
-TODO(roasbeef): tlv err where?
+| TLV Type | Field Name       | Field Type |
+|----------|------------------|------------|
+| 0        | version          | 1*byte     |
+| 2        | rfq_id           | 32*byte    |
+| 4        | expiry           | 8*byte     |
+| 6        | rfq_sig          | 64*byte    |
+| 8        | in_asset_to_btc  | FixedPoint |
+| 10       | out_asset_to_btc | FixedPoint |
 
 where:
 
-* `rfq_id` matches the existing `rfq_id` of a set `tap_rfq`
+* `version` is the version of the quote accept message. The current version is
+  `1`.
 
-* `accepted_rate_tick` is the proposed rate for the volume unit expressed in
-  the internal unit of a `tick`.
+* `rfq_id` matches the existing `rfq_id` of a set `tap_rfq`.
 
 * `expiry` is the quote expiry lifetime unix timestamp. The quote is only valid
   until this time.
 
-* `rfq_sig` is a signature over the serialized contents of the message 
+* `rfq_sig` is a signature over the serialized contents of the message.
+
+* `in_asset_to_btc` is the in-asset to BTC conversion rate represented as a
+  [fixed-point number](#fixed-point-number-type). When the in-asset is BTC milli-satoshis (msats),
+  this field should be set to 100 billion since there are 100 billion msats in a
+  BTC.
+
+* `out_asset_to_btc` is the out-asset to BTC conversion rate represented as a
+  [fixed-point number](#fixed-point-number-type). When the out-asset is BTC milli-satoshis (msats),
+  this field should be set to 100 billion since there are 100 billion msats in a
+  BTC.
+
+Note that all numeric types, except for `BigSize` types, are encoded in
+big-endian byte order.
 
 ##### Requirements
 
 The sender:
 
-  - MUST set `rfq_id` to the matching `rfq_id` sent in a prior `tap_rfq` message
+- MUST set `rfq_id` to the matching `rfq_id` sent in a prior `tap_rfq` message.
 
-  - MUST set `accepted_rate_tick` to a value they deem to be an acceptable
-    exchange rate
+- MUST set `expiry` to a future unix timestamp after which the quote is no
+  longer valid.
 
-  - MUST set `expiry` to a future unix timestamp after which the quote is no
-    longer valid
+- MUST set `rfq_sig` to be a BIP-340 schnorr signature over the serialized
+  contents of the message without the `rfq_sig` serialized, using their node
+  public key.
 
-  - MUST set `rfq_sig` to be a BIP-340 schnorr signature over the serialized
-    contents of the message without the `rfq_sig` serialized, using their node
-    public key
+- MUST set the fields `in_asset_to_btc` and `out_asset_to_btc` to appropriate
+  values based on the asset exchange rates.
 
 The recipient:
 
-  - MUST abandon the attempt if `rfq_sig` is invalid
+- MUST abandon the RFQ session if `version` corresponds to an unsupported
+  version.
 
-  - MUST abandon the attempt if they deem that `accepted_rate_tick` is
-    unreasonable
+- MUST abandon the RFQ session if `rfq_sig` is invalid.
 
-  - SHOULD no longer attempt to utilize the cleared quote after unix timestamp
-    `expiry`
+- MUST abandon the attempt if they deem that `in_asset_to_btc`
+  or `out_asset_to_btc` is unreasonable.
+
+- SHOULD no longer attempt to utilize the cleared quote after unix timestamp
+  `expiry`.
 
 #### Rejecting Quotes  (`tap_rfq_reject`) 
 
 In the event that an edge node is unable to satisfy a quote request, then they
 should send `tap_rfq_reject`, identifying the rejected quote ID. A quote might
 be rejected if the channel cannot accommodate the proposed volume, or if the
-edge node is unwilling to carry any HTLCs for that `asset_id`.
+edge node is unwilling to carry any HTLCs for the subject TAP asset(s).
 
-1. type: ?? (`tap_req_accept`)
-2. data:
-     * [`32*byte`:`rfq_id`]
+The `tap_rfq_reject` message has a BOLT 01 wire message type integer of 52886,
+falling within the custom message range. Its TLV stream consists of the
+following TLV fields:
+
+| TLV Type | Field Name | Field Type |
+|----------|------------|------------|
+| 0        | version    | 1*byte     |
+| 2        | rfq_id     | 32*byte    |
+| 5        | err        | RejectErr  |
 
 where:
 
-* `rfq_id` is the quote ID that they wish to reject
+* `version` is the version of the quote reject message. The current version is
+  `1`.
+
+* `rfq_id` is the quote ID that they wish to reject.
+
+* `err` is an optional error field which specifies the reason for the rejection.
+  Its type, `RejectErr`, is a concatenation of an error code and a variable
+  length error message: `<uint8><varbyte>`.
+
+  Existing error codes and messages are as follows:
+
+  | Error Code | Error Message            |
+  |------------|--------------------------|
+  | 0          | unknown error            |
+  | 1          | price oracle unavailable |
+
+  The error message corresponding to code `0` is customizable.
+
+Note that all numeric types, except for `BigSize` types, are encoded in
+big-endian byte order.
 
 ##### Requirements
 
 The sender:
 
-  - MUST set `rfq_id` to the matching `rfq_id` sent in a prior `tap_rfq` message
+- MUST set `rfq_id` to the matching `rfq_id` sent in a prior `tap_rfq`
+  message.
 
 The recipient:
 
-  - MUST not attempt to send/receive using the rejected `rfq_id`
+- MUST not attempt to send/receive using the rejected `rfq_id`.
 
+#### Fixed-Point Number Type
+
+The fixed-point number type represents a scaled integer representation of a
+fractional number. It is used to represent asset-to-BTC conversion rates in the
+`tap_rfq` and `tap_rfq_accept` messages.
+
+This number type consists of two integer fields: a coefficient and a scale.  
+Using this format enables precise and consistent representation of fractional
+values while avoiding floating-point data types, which are prone to precision
+errors.
+
+The relationship between the fractional representation and its fixed-point
+representation is expressed as:
+
+```
+V = F_c / (10^F_s)
+```
+
+where:
+
+* `V` is the fractional value.
+* `F_c` is the coefficient component of the fixed-point number. It is the
+  scaled-up fractional value represented as an integer.
+* `F_s` is the scale component of the fixed-point number. It is an integer
+  specifying how many decimal places `F_c` should be divided by to obtain the
+  fractional representation.
+
+When serialized into a wire message, the fixed-point number is represented as a
+concatenation of its coefficient and scale fields: `<uint64><uint8>`.
+
+##### Fixed-Point Number Operations
+
+This section describes how various operations are performed on fixed-point
+numbers, including arithmetic operations, scaling, and handling calculations
+involving both fixed-point and regular numbers.
+
+###### Multiplication
+
+To multiply two fixed-point numbers, apply the following formulas:
+
+```
+F_c = F_c1 * F_c2
+F_s = F_s1 + F_s2
+```
+
+where:
+
+* `F_c1` and `F_c2` are the coefficients of the fixed-point numbers being
+  multiplied.
+* `F_s1` and `F_s2` are the scales of the fixed-point numbers being multiplied.
+* `F_c` is the resulting coefficient.
+* `F_s` is the resulting scale.
+
+###### Division
+
+To divide two fixed-point numbers, use the following formulas:
+
+```
+F_c = F_c1 / F_c2
+F_s = F_s1 - F_s2
+```
+
+where:
+
+* `F_c1` and `F_c2` are the coefficients of the fixed-point numbers being
+  divided.
+* `F_s1` and `F_s2` are the scales of the fixed-point numbers being divided.
+* `F_c` is the resulting coefficient.
+* `F_s` is the resulting scale.
+
+###### Scaling Up a Fixed-Point Number
+
+To increase the scale component of a fixed-point number by `n`, the following
+formulas apply:
+
+```
+F_c' = F_c * 10^n
+F_s' = F_s + n
+```
+
+where:
+
+* `n` is the amount by which the scale is increased.
+* `F_c'` is the updated coefficient.
+* `F_s'` is the updated scale.
+
+###### Mixed-Type Calculations
+
+When performing calculations with both fixed-point and regular numbers, the
+regular numbers are first converted to fixed-point. Before applying any
+operation, all fixed-point numbers are adjusted to the same scale. The scale is
+set to the maximum of any fixed-point number used in the calculation.
 
 #### First Hop TAP HTLC Onion Processing
 
@@ -1076,9 +1307,10 @@ the payload for the first hop (the liquidity provider):
 The `tap_onion_rfq_id` MUST be present in the onion to the outgoing peer if the
 HTLC has a TAP asset origin.
 
-In addition to the normal hop payload checks, the forwarding node MUST also
-verify that the conversion rate of the outgoing HTLC as specified in the onion
-matches the `accepted_rate_tick` of the corresponding `tap_rfq_id`.
+In addition to performing the standard hop payload checks, the forwarding node
+MUST verify that the outgoing HTLC amount, as specified in the onion, aligns
+with the asset-to-BTC rates provided in the corresponding accepted RFQ quote
+(identified by the `tap_rfq_id` field).
 
 When receiving an incoming onion TLV payload sourced from a TAP channel, the
 receiving node:
@@ -1091,72 +1323,115 @@ receiving node:
 - MUST reject the payment if the `tap_rfq_id` has expired based on the posted
   `expiry` value.
 
-- MUST reject the payment the `amt_to_forward != (amt_asset_incoming * tick *
-  msat_multiplier) / accepted_rate_tick
+- MUST reject the payment if
+  ```
+  amt_msat_to_forward > (amt_asset_incoming / incoming_asset_to_btc) * btc_to_msat_multiplier
+  ```
+  This equation stipulates an upper bound on the HTLC msat value that the
+  liquidity provider should forward to the next hop.
 
-where:
+  In this equation, the right-hand side converts the incoming TAP asset amount
+  to BTC by dividing it by the asset-to-BTC conversion rate
+  (`incoming_asset_to_btc`). The resulting BTC value is then converted to
+  milli-satoshis (msats).
 
-  * `amt_asset_incoming` is the HTLC value of the `asset_id` quote accepted in
-    the earlier RFQ round
+  The terms in this equation are defined as follows:
+ 
+  * `amt_msat_to_forward` is the HTLC msat value that the liquidity provider
+    should forward to the next hop.
 
-  * `msat_multiplier` is a factor used to scale from `BTC/asset` to
-    `msat/asset_id`, this value is constant within the protocol and is derived
-    by multiplying the number of sats per Bitcoin, by the amount of sats in an
-    msat: `msat_multiplier = 100_000_000 * 1000 = 100_000_000_000` (100
-    billion)
+  * `amt_asset_incoming` is the HTLC value of the incoming asset amount.
 
-    * As an example: 
-      * If the incoming channel is a USD backed asset, and wishes to send $1000
-        outbound, with a rate of $61234.95 (`accepted_rate_tick = 61234.95 *
-        tick = 612_349_500` then the forwarding node expects to be instructed
-        to send `1,633,054,326 mSAT` over the outgoing link:
-          * `amt_to_forward = ($1000 * tick * msat_multiplier) // 612_349_500`
-          * `amt_to_forward = (1_000 * 10_000 * 100_000_000_000) // 612_349_500`
-          * `amt_to_forward = (1000000000000000000) // 612_349_500`
-          * `amt_to_forward = 1_633_054_326`
+  * `btc_to_msat_multiplier` is a constant used to convert BTC to
+    milli-satoshis (msats). It is defined as:
+    ```
+    btc_to_msat_multiplier = 100_000_000 * 1000 = 100_000_000_000`
+    ```
+
+    This constant combines two conversions:
+    1. BTC to Satoshis: 1 BTC = 100,000,000 satoshis.
+    2. Satoshis to msats: 1 satoshi = 1,000 msats.
+
+  * `incoming_asset_to_btc` represents the fractional conversion rate between
+    the incoming asset and BTC. This rate is derived from the
+    [fixed-point](#fixed-point-number-type) conversion rate, which was agreed
+    upon during the RFQ negotiation between the sender and the liquidity
+    provider.
+
+  Note that in practice, this equation is computed using fixed-point arithmetic.
+  For more details, refer to [Fixed-Point Number Operations](#fixed-point-number-operations).
 
 #### Last Hop TAP HTLC Onion Processing
 
-In the event that the last hop in a route receive a payload that has an
+In the event that the last hop in a route receive a payload that has a
 `short_channel_id` value that matches a prior accepted `rfq_scid` value, then
 this indicates that the sender is attempting to pay a receiver in the asset
 bound by the `rfq_id` and `rfq_scid`.
 
-Note that we don't require that the sender use any special values other than
-what is already known in the existing protocol. This enables _unupgraded_
-senders to send BTC, with the receiver obtaining their asset of choice, without
-the sender needing to worry about exchange rates at all.
+Note that no special values are required beyond what is already known in the
+existing protocol. This enables _un-upgraded_ senders to send BTC, allowing the
+receiver to obtain their asset of choice without the sender needing to worry
+about exchange rates at all.
 
-When receieving an incoming onion payload with a known `rfq_scid` value, the
+When receiving an incoming onion payload with a known `rfq_scid` value, the
 receiver:
 
 - MUST reject the HTLC is `tap_scid` is expired based on the posted `expiry`
   value
 
-- MUST reject the entire HTLC set if at anytime, the sum of HTLCs (the
-  `amt_to_forward` field) targetting `tap_rfq_scid` eceeds the negotiated
+- MUST reject the entire HTLC set if at any time, the sum of HTLCs (the
+  `amt_to_forward` field) targeting `tap_rfq_scid` exceeds the negotiated
   `asset_amt` field (volume for quote exhausted)
 
 - MUST extend a TAP HTLC with an `asset_id` corresponding to the accepted
-  `tap_rfq_scid` with an asset value of: `((amt_asset_incoming *
-  accepted_rate_tick) // msat_multiplier) / tick`
+  `tap_rfq_scid` with an asset value of:
+  ```
+  amt_asset_to_forward = incoming_amt_msat * (asset_to_btc_rate / btc_to_msat_multiplier)
+  ```
 
-  * As an example:
-    * If the outgoing channel (last hop receiver) is a USD backed asset, and
-      requested an invoice `1_633_054_326 mSAT`, but wants USD with an accepted
-      tick rate of `612_349_500` ($61,234.95), then the penultimate node should
-      send $1000 to the last hop:
-        * `amt_to_forward = ((incoming_amt_msat * accepted_rate_tick) // msat_multiplier) / tick`
-        * `amt_to_forward = ((1_633_054_326 * 612_349_500) // 100_000_000_000) / 10_000`
-        * `amt_to_forward = ((999999999998937000) // 100_000_000_000) / 10_000`
-        * `amt_to_forward = (9999999 / 10_000)`
-        * `amt_to_forward = (9999999 / 10_000)`
-        * `amt_to_forward = 999.9`
-    * Note that all assets internally are accounted in a unit of a `tick`
-      (1/1000th) of an asset. When convering back to the main asset, the value
-      should be rounded up, giving us the original value of `$1000`.
+  where:
 
+  * `amt_asset_to_forward` is the amount of the TAP asset that the receiver
+    should forward to the next hop.
 
+  * `incoming_amt_msat` is the amount of the incoming HTLC in milli-satoshis.
+
+  * `asset_to_btc_rate` refers to the asset-to-BTC conversion rate established
+    during the RFQ negotiation between the sender and the liquidity provider.
+    This fractional rate is derived from the
+    [fixed-point](#fixed-point-number-type) representation of the conversion
+    rate found in the RFQ wire messages.
+
+  * `btc_to_msat_multiplier` is a constant used to convert BTC to milli-satoshis
+    (msats). It is defined as:
+    ```
+    btc_to_msat_multiplier = 100_000_000 * 1000 = 100_000_000_000`
+    ```
+
+    This constant combines two conversions:
+      1. BTC to Satoshis: 1 BTC = 100,000,000 satoshis.
+      2. Satoshis to msats: 1 satoshi = 1,000 msats.
+
+  Here's an example of how the `amt_asset_to_forward` value is calculated:
+
+  Consider an outgoing channel which uses a USD-backed asset. The last hop
+  receiver issues an invoice for `1_633_054_326 mSAT` but expects USD. The
+  accepted asset-to-BTC conversion rate expressed as a
+  [fixed-point](#fixed-point-number-type) has a coefficient of `612_349_500` and
+  a scale of `4`. The fractional conversion rate is therefore `61_234.95`
+  (implying `$61,234.95 = 1BTC`). As a result, the penultimate node should send
+  $1,000 to the last hop:
+
+  * `amt_asset_to_forward = incoming_amt_msat * (asset_to_btc_rate / btc_to_msat_multiplier)`
+  * `amt_asset_to_forward = 1_633_054_326 * (61_234.95 / 100_000_000_000)`
+  * `amt_asset_to_forward = 999.9999999989369`
+  * `⌊amt_asset_to_forward⌋ = 999`
+
+  Note that in practice, this equation is computed using fixed-point arithmetic.
+  For more details, refer to [Fixed-Point Number Operations](#fixed-point-number-operations).
+
+Integer division is used in this formulation (rounding down). Invoices may be
+settled with an underpayment of up to 1 asset unit.
 
 #### Invoice Format
 
@@ -1175,24 +1450,32 @@ When creating an invoice, the creator MUST ensure that the invoice expiry value
 is set exactly to the lifetime of the accepted RFQ based on the RFQ `expiry`
 unix timestamp.
 
-When creating an invoice from an `accepted_rate_tick`, with a base currency of
-`asset_id`, a conversion MUST be carried out to express the desired amount in
-terms of _BTC_ rather than the asset tick. As an example:
+When creating an invoice, the asset-to-BTC conversion rate is used to express
+the invoice amount in milli-satoshis (msats), not in the TAP asset units that
+the invoice creator wants to receive. This conversion rate is agreed upon during
+the RFQ process.
 
-  * A user wants to receive $100 over their USD backed channel. The
-    `accepted_rate_tick` that can satisfy that volume, and hasn't expired yet
-    is `612_349_500` or `$61,234.95`. To arrive at the `mSAT` value they should
-    put into the invoice:
-      * `invoice_amt = (asset_amt * tick * msat_multiplier) / accepted_rate_tick`
-      * `invoice_amt = (100 * 10_000 * 100_000_000_000) / 612_349_500`
-      * `invoice_amt = (100000000000000000) / 612_349_500`
-      * `invoice_amt = (100000000000000000) / 612_349_500`
-      * `invoice_amt = 163305432 mSAT`
-      * `invoice_amt = 163305 SAT`
-    
-Always expressing the invoice amount in BTC/mSAT ensures that unpugraded
-senders will be able to send over these asset channels.
+For example, consider the case where a user wants to receive $100 over their USD
+backed channel. An RFQ quote was agreed with a fractional conversion rate
+`asset_to_btc_rate`. The agreed quote was sufficient to support a volume of
+$100.
 
+The conversion rate as a [fixed-point](#fixed-point-number-type) found in the
+RFQ wire messages has a coefficient of `612_349_500` and a scale of `4`. The
+fractional conversion rate is therefore `61_234.95` (implying
+`$61,234.95 = 1BTC`).
+
+The user calculates the invoice amount as follows:
+* `invoice_amt = (asset_amt / asset_to_btc_rate) * btc_to_msat_multiplier`
+* `invoice_amt = (100 / 61_234.95) * 100_000_000_000`
+* `invoice_amt = 163_305_432.60017`
+* `⌊invoice_amt⌋ = 163_305_432 mSAT`
+
+Integer division is used in this formulation (rounding down). Invoices may be
+settled with an underpayment of up to 1 asset unit.
+
+Always expressing the invoice amount in BTC/mSAT ensures that senders who have
+not upgraded can still send payments over these asset channels.
 
 ## Universality
 
