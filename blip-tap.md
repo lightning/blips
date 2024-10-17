@@ -939,21 +939,21 @@ The `tap_rfq` message has a BOLT 01 wire message type integer of 52884, falling
 within the custom message range. Its TLV stream consists of the following TLV
 fields:
 
-| TLV Type | Field Name          | Field Type |
-|----------|---------------------|------------|
-| 0        | version             | 1*byte     |
-| 2        | rfq_id              | 32*byte    |
-| 4        | transfer_type       | 1*byte     |
-| 6        | expiry              | 8*byte     |
-| 9        | in_asset_id         | 32*byte    |
-| 11       | in_asset_group_key  | 33*byte    |
-| 13       | out_asset_id        | 32*byte    |
-| 15       | out_asset_group_key | 33*byte    |
-| 16       | max_in_asset        | BigSize    |
-| 19       | in_asset_to_btc     | FixedPoint |
-| 21       | out_asset_to_btc    | FixedPoint |
-| 23       | min_in_asset        | BigSize    |
-| 25       | min_out_asset       | BigSize    |
+| TLV Type | Field Name          | Field Type                                      |
+|----------|---------------------|-------------------------------------------------|
+| 0        | version             | 1*byte                                          |
+| 2        | rfq_id              | 32*byte                                         |
+| 4        | transfer_type       | 1*byte                                          |
+| 6        | expiry              | 8*byte                                          |
+| 9        | in_asset_id         | 32*byte                                         |
+| 11       | in_asset_group_key  | 33*byte                                         |
+| 13       | out_asset_id        | 32*byte                                         |
+| 15       | out_asset_group_key | 33*byte                                         |
+| 16       | max_in_asset        | BigSize                                         |
+| 19       | in_asset_to_btc     | [FixedPoint](#Fixed-Point-Number-Serialization) |
+| 21       | out_asset_to_btc    | [FixedPoint](#Fixed-Point-Number-Serialization) |
+| 23       | min_in_asset        | BigSize                                         |
+| 25       | min_out_asset       | BigSize                                         |
 
 where:
 
@@ -1087,14 +1087,14 @@ message has a BOLT 01 wire message type integer of 52885, which falls within the
 custom message range. The associated TLV stream includes the following TLV
 fields:
 
-| TLV Type | Field Name       | Field Type |
-|----------|------------------|------------|
-| 0        | version          | 1*byte     |
-| 2        | rfq_id           | 32*byte    |
-| 4        | expiry           | 8*byte     |
-| 6        | rfq_sig          | 64*byte    |
-| 8        | in_asset_to_btc  | FixedPoint |
-| 10       | out_asset_to_btc | FixedPoint |
+| TLV Type | Field Name       | Field Type                                      |
+|----------|------------------|-------------------------------------------------|
+| 0        | version          | 1*byte                                          |
+| 2        | rfq_id           | 32*byte                                         |
+| 4        | expiry           | 8*byte                                          |
+| 6        | rfq_sig          | 64*byte                                         |
+| 8        | in_asset_to_btc  | [FixedPoint](#Fixed-Point-Number-Serialization) |
+| 10       | out_asset_to_btc | [FixedPoint](#Fixed-Point-Number-Serialization) |
 
 where:
 
@@ -1228,8 +1228,14 @@ where:
   specifying how many decimal places `F_c` should be divided by to obtain the
   fractional representation.
 
-When serialized into a wire message, the fixed-point number is represented as a
-concatenation of its coefficient and scale fields: `<uint64><uint8>`.
+##### Fixed-Point Number Serialization
+
+When serialized into a wire message, the fixed-point field type `FixedPoint` is
+represented as a concatenation of its scale and coefficient fields: a 1-byte
+unsigned integer for the scale, followed by a variable-length byte sequence that
+encodes the coefficient as a big-endian unsigned integer. The maximum
+coefficient size is constrained by the maximum wire message size as defined in
+BOLT 01.
 
 ##### Fixed-Point Number Operations
 
@@ -1455,8 +1461,8 @@ the invoice amount in milli-satoshis (msats), not in the TAP asset units that
 the invoice creator wants to receive. This conversion rate is agreed upon during
 the RFQ process.
 
-For example, consider the case where a user wants to receive $100 over their USD
-backed channel. An RFQ quote was agreed with a fractional conversion rate
+For example, consider the case where a user wants to receive \$100 over their
+USD backed channel. An RFQ quote was agreed with a fractional conversion rate
 `asset_to_btc_rate`. The agreed quote was sufficient to support a volume of
 $100.
 
