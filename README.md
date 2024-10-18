@@ -28,6 +28,7 @@ For more detail on the process, please read [bLIP-0001](./blip-0001.md) and
 | [17](./blip-0017.md)     | Hosted Channels                 | Anton Kumaigorodskiy        | Active |
 | [25](./blip-0025.md)     | Forward less than onion value   | Valentine Wallace           | Active |
 | [32](./blip-0032.md)     | Onion Message DNS Resolution    | Matt Corallo                | Active |
+| [42](./blip-0042.md)     | Bolt 12 Contacts                | Bastien Teinturier          | Active |
 | [50](./blip-0050.md)     | LSPS0: LSP Spec Transport Layer | ZmnSCPxj jxPCSnmZ           | Active |
 | [51](./blip-0051.md)     | LSPS1: Channel Requests         | Severin Bühler              | Active |
 | [52](./blip-0052.md)     | LSPS2: JIT Channel Negotiation  | ZmnSCPxj jxPCSnmZ           | Active |
