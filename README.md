@@ -28,4 +28,4 @@ For more detail on the process, please read [bLIP-0001](./blip-0001.md) and
 | [17](./blip-0017.md)     | Hosted Channels                | Anton Kumaigorodskiy        | Active |
 | [25](./blip-0025.md)     | Forward less than onion value  | Valentine Wallace           | Active |
 | [32](./blip-0032.md)     | Onion Message DNS Resolution   | Matt Corallo                | Active |
-
+| [43](./blip-0043.md)     | Alternative Addresses          | Max Rantil                  | Active |
