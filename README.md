@@ -33,3 +33,4 @@ For more detail on the process, please read [bLIP-0001](./blip-0001.md) and
 | [51](./blip-0051.md)     | LSPS1: Channel Requests         | Severin Bühler              | Active |
 | [52](./blip-0052.md)     | LSPS2: JIT Channel Negotiation  | ZmnSCPxj jxPCSnmZ           | Active |
 | [55](./blip-0055.md)     | LSPS5: Webhook Registration     | ZmnSCPxj jxPCSnmZ           | Active |
+| [TBD](./path-queries.md) | Path Queries                    | Benjamin Hindman            | Draft  |
